@@ -1,0 +1,72 @@
+1.
+SELECT Sum(Nvl(commission_pct, 0) * salary), Count(commission_pct), Count(*)
+FROM employees;
+
+2.
+SELECT j.job_title "Naziv posla", d.department_id "Naziv organizacione jedinice", Count(e.employee_id) "Broj zaposlenih"
+FROM employees e, departments d, jobs j
+WHERE e.department_id = d.department_id AND e.job_id = j.job_id
+GROUP BY j.job_title, d.department_id;
+
+3.
+SELECT To_Char(Min(salary), 'fm999999999.000000'), To_Char(Max(salary), 'fm999999999.000000'), To_Char(Sum(salary), 'fm999999999.000000'), To_Char(Avg(salary), 'fm999999999.000000')
+FROM employees;
+
+4.
+SELECT j.job_title "Posao", To_Char(Min(e.salary), 'fm999999999.000000'), To_Char(Max(e.salary), 'fm999999999.000000'),
+       To_Char(Sum(e.salary), 'fm999999999.000000'), To_Char(Avg(e.salary), 'fm999999999.000000')
+FROM employees e, jobs j
+WHERE e.job_id = j.job_id
+GROUP BY j.job_title;
+
+5.
+SELECT j.job_title "Posao", Count(e.employee_id)
+FROM employees e, jobs j
+WHERE e.job_id = j.job_id
+GROUP BY j.job_title;
+
+6.
+SELECT Count(Count(*))
+FROM employees e, employees m
+WHERE e.manager_id = m.employee_id
+GROUP BY m.employee_id;
+
+7.
+SELECT m.first_name || ' ' || m.last_name, m.salary
+FROM employees e, employees m
+WHERE e.manager_id = m.employee_id AND m.salary = (SELECT Min(m2.salary) FROM employees e2, employees m2 WHERE e2.manager_id = m2.employee_id AND m2.department_id = m.department_id)
+GROUP BY m.first_name || ' ' || m.last_name, m.salary;
+
+8.
+SELECT d.department_name, l.city, Count(e.employee_id), Avg(e.salary)
+FROM employees e, departments d, locations l
+WHERE e.department_id = d.department_id AND d.location_id = l.location_id
+GROUP BY d.department_name, l.city;
+
+9.
+SELECT Count(Decode(To_Char(hire_date, 'YYYY'), 1995, 1, NULL)) "1995g",
+       Count(Decode(To_Char(hire_date, 'YYYY'), 1996, 1, NULL)) "1996g",
+       Count(Decode(To_Char(hire_date, 'YYYY'), 1997, 1, NULL)) "1997g",
+       Count(Decode(To_Char(hire_date, 'YYYY'), 1998, 1, NULL)) "1998g",
+       Count(Decode(To_Char(hire_date, 'YYYY'), 1995, 1, 1996, 1, 1997, 1, 1998, 1, NULL)) "Ukupan broj"
+FROM employees;
+
+Drugi način:
+
+SELECT Count(e1) "1995g", Count(e2) "1996g", Count(e3) "1997g", Count(e4) "1998g", Count(e5) "Ukupan broj"
+FROM (SELECT CASE WHEN To_Char(hire_date, 'YYYY') = '1995' THEN 1 END e1,
+     CASE WHEN To_Char(hire_date, 'YYYY') = '1996' THEN 1 END e2,
+     CASE WHEN To_Char(hire_date, 'YYYY') = '1997' THEN 1 END e3,
+     CASE WHEN To_Char(hire_date, 'YYYY') = '1998' THEN 1 END e4,
+     CASE WHEN hire_date BETWEEN To_Date('01011995', 'DDMMYYYY') AND To_Date('31121998', 'DDMMYYYY') THEN 1 END e5
+     FROM employees);
+
+Objašnjenje i primjeri na sljedećem linku: https://blog.jooq.org/2017/04/20/how-to-calculate-multiple-aggregate-functions-in-a-single-query/https://blog.jooq.org/2017/04/20/how-to-calculate-multiple-aggregate-functions-in-a-single-query/
+
+10.
+SELECT j.job_title "Posao",
+(SELECT Sum(salary) FROM employees WHERE department_id = 10 AND job_id = j.job_id) "Odjel 10",
+(SELECT Sum(salary) FROM employees WHERE department_id = 30 AND job_id = j.job_id) "Odjel 30",
+(SELECT Sum(salary) FROM employees WHERE department_id = 50 AND job_id = j.job_id) "Odjel 50",
+(SELECT Sum(salary) FROM employees WHERE department_id = 90 AND job_id = j.job_id) "Odjel 90"
+FROM jobs j;

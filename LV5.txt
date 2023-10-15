@@ -1,0 +1,130 @@
+1.
+SELECT e.first_name || ' ' || e.last_name, d.department_name, j.job_title
+FROM employees e, departments d, jobs j
+WHERE e.department_id = (SELECT department_id 
+                         FROM employees
+                         WHERE first_name = 'Susan')
+      AND e.first_name != 'Susan';
+
+2.
+SELECT employee_id, first_name, last_name, salary
+FROM employees
+WHERE salary > (SELECT Avg(salary)
+                  FROM employees
+                  WHERE department_id IN (30, 90))
+
+3.
+SELECT *
+FROM employees
+WHERE department_id = ANY (SELECT department_id
+                         FROM employees
+                         WHERE first_name LIKE '%C%');
+
+4.
+SELECT e.employee_id, e.first_name || ' ' || e.last_name, j.job_title
+FROM employees e, jobs j
+WHERE e.job_id = j.job_id
+      AND department_id = (SELECT d.department_id
+                           FROM departments d, locations l
+                           WHERE d.location_id = l.location_id
+                                 AND l.city = 'Toronto');
+
+5.
+SELECT *
+FROM employees
+WHERE manager_id = (SELECT employee_id
+                    FROM employees
+                    WHERE first_name || ' ' || last_name = 'Steven King');
+
+6.
+SELECT *
+FROM employees e
+WHERE e.department_id = ANY (SELECT department_id
+                         FROM employees
+                         WHERE first_name LIKE '%C%')
+     AND e.salary > (SELECT Avg(e2.salary)
+                     FROM employees e2
+                     WHERE e2.department_id = e.department_id);
+
+7.
+SELECT e.first_name || ' ' || e.last_name, d.department_name, e.salary
+FROM employees e, departments d
+WHERE e.department_id = d.department_id(+)
+      AND (Nvl(e.department_id, 0), e.salary) IN (SELECT Nvl(department_id, 0), salary
+                                                  FROM employees
+                                                  WHERE commission_pct IS NOT NULL)
+      AND commission_pct IS NULL;
+
+8.
+SELECT e.first_name || ' ' || e.last_name, d.department_name, e.salary, l.city
+FROM employees e, departments d, locations l
+WHERE e.department_id = d.department_id
+      AND d.location_id = l.location_id
+      AND (e.salary, Nvl(e.commission_pct, 0)) IN (SELECT e2.salary, Nvl(e2.commission_pct, 0)
+                                             FROM employees e2, departments d2, locations l2
+                                             WHERE e2.department_id = d2.department_id
+                                                   AND d2.location_id = l2.location_id
+                                                   AND l2.city = 'Roma');
+
+9.
+SELECT first_name || ' ' || last_name, hire_date, salary
+FROM employees
+WHERE (salary, Nvl(commission_pct, 0)) = (SELECT salary, Nvl(commission_pct, 0)
+                                          FROM employees
+                                          WHERE last_name = 'Austin');
+
+10.
+SELECT *
+FROM employees
+WHERE salary > ALL (SELECT e.salary
+                    FROM employees e, departments d
+                    WHERE e.department_id = d.department_id
+                          AND d.department_name LIKE '%Sale%')
+ORDER BY salary DESC;
+
+11.
+SELECT e.first_name || ' ' || e.last_name, d.department_name, j.job_title, l.city
+FROM employees e, departments d, jobs j, locations l
+WHERE e.department_id = d.department_id
+      AND e.job_id = j.job_id
+      AND d.location_id = l.location_id
+      AND e.salary > (SELECT Avg(e2.salary)
+                      FROM employees e2
+                      WHERE e2.employee_id = e.manager_id
+                            AND e2.commission_pct IS NOT NULL
+                            AND e2.department_id = e.department_id);
+
+12.
+SELECT DISTINCT e.employee_id, e.first_name || ' ' || e.last_name, d.department_id, d.department_name, e.salary,
+       plate.average, plate.minimum, plate.maximum,
+       plate2.minimum, plate2.maximum, plate2.average
+FROM employees e, departments d,
+      -- minimalna, maksimalna i prosjecna plata odjela u kojem zaposlenik radi
+     (SELECT Avg(e2.salary) AS average, Min(e2.salary) AS minimum, Max(e2.salary) AS maximum, e2.department_id AS department_id
+      FROM employees e2
+      GROUP BY department_id) plate,
+
+      -- minimalna, maksimalna i prosjecna plata na nivou firme
+     (SELECT Min(e3.salary) AS minimum, Max(e3.salary) AS maximum, Avg(e3.salary) AS average, e3.salary AS plata
+      FROM employees e3
+      GROUP BY e3.salary) plate2,
+
+      -- minimalna prosjecna plata svih sefova po odjelima
+     (SELECT Min(plate3.average) AS minimum, plate3.department_id AS department_id
+      -- prosjecna plata svih sefova na nivou firme
+      FROM (SELECT Avg(e4.salary) AS average, e4.department_id AS department_id
+            FROM employees e4
+            -- osiguravanje da dobijemo samo zaposlenike koji su sefovi
+            WHERE e4.employee_id IN (SELECT DISTINCT e5.employee_id
+                                     FROM employees e5, employees e6
+                                     WHERE e5.employee_id = e6.manager_id)   
+            GROUP BY e4.department_id) plate3
+      GROUP BY plate3.department_id) plate4
+
+WHERE e.department_id = d.department_id
+      -- osiguravanje da dobijemo prosjecnu platu samo za odjel u kojem zaposlenik radi
+      AND e.department_id = plate.department_id
+      -- osiguravanje da minimalna prosjecna plata bude samo za sefove iz odjela zaposlenika
+      AND e.department_id = plate4.department_id
+      -- osiguravanje da u racun za nivo firme udu samo plate vece od minimalne prosjecne plate sefova
+      AND plate2.plata > plate4.minimum;
