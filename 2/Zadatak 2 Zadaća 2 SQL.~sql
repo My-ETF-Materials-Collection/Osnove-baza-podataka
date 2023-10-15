@@ -1,0 +1,68 @@
+CREATE table TabelaA(id number,
+                     Naziv varchar2(25),
+                     Datum DATE,
+                     CijeliBroj number constraint cbcheck check(CijeliBroj not between 5 and 15),
+                     RealniBroj number constraint rbcheck check (RealniBroj > 5),
+                     constraint pktaba primary key (id)
+                    );
+Create table TabelaB(id number, Naziv varchar2(25),
+                     Datum DATE,
+                     CijeliBroj number constraint unqcb unique,
+                     RealniBroj number,
+                     FKTabelaA number constraint nnullb NOT NULL,
+                     constraint fktabelaa FOREIGN KEY (FKTabelaA) references TabelaA(id),
+                     constraint pktabb primary key (id)
+                    );
+Create table TabelaC(id number,
+                     Naziv varchar2(25),
+                     Datum DATE,
+                     CijeliBroj number,
+                     RealniBroj number,
+                     FKTabelaB number,
+                     constraint FkCnst FOREIGN KEY (FKTabelaB) references TabelaB(id)
+                    );
+
+insert into TABELAA values (1,'tekst',null,null,6.2);
+insert into TABELAA values (2,null,null,3,5.26);
+insert into TABELAA values (3,'tekst',null,1,null);
+insert into TABELAA values (4,null,null,null,null);
+insert into TABELAA values (5,'tekst',null,16,6.78);
+
+insert into TABELAb values (1,null,null,1,null,1);
+insert into TABELAb values (2,null,null,3,null,1);
+insert into TABELAb values (3,null,null,6,null,2);
+insert into TABELAb values (4,null,null,11,null,2);
+insert into TABELAb values (5,null,null,22,null,3);
+
+insert into TABELAc values (1,'yes',null,33,null,4);
+insert into TABELAc values (2,'no',null,33,null,2);
+insert into TABELAc values (3,'no',null,55,null,1);
+
+--Moze se izvrsiti
+INSERT INTO TabelaA (id,naziv,datum,cijeliBroj,realniBroj) VALUES (6,'tekst',null,null,6.20);
+--Cijeli broj unique
+INSERT INTO TabelaB (id,naziv,datum,cijeliBroj,realniBroj,FkTabelaA) VALUES (6,null,null,1,null,1);
+--Moze se izvrsiti
+INSERT INTO TabelaB (id,naziv,datum,cijeliBroj,realniBroj,FkTabelaA) VALUES (7,null,null,123,null,6);
+--moze se izvrsiti
+INSERT INTO TabelaC (id,naziv,datum,cijeliBroj,realniBroj,FkTabelaB) VALUES (4,'NO',null,55,null,null);
+--Moze se izvrsiti
+Update TabelaA set naziv = 'tekst' Where naziv is null and cijeliBroj is not null;
+--jer je foreign key za drugu tabelu C
+Drop table TabelaB;
+--jer je foreign key za drugu tabelu B
+delete from TabelaA where realniBroj is null;
+--moze
+Delete from TabelaA where id = 5;
+--moze
+Update TabelaB set fktabelaA = 4 where fktabelaA = 2;
+--moze
+Alter Table tabelaA add Constraint cst Check (naziv like 'tekst');
+
+--Rezultati za provjeru su.
+Select Sum(id) From TabelaA;
+--Rezultat 16
+Select Sum(id) From TabelaB;
+--Rezultat 22
+Select Sum(id) From TabelaC;
+--Rezultat 10
